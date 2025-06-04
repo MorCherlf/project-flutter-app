@@ -8,7 +8,10 @@ import 'package:project/screens/add_devices_screen.dart';
 import 'package:project/screens/device_screen.dart';
 import 'package:project/screens/qr_code_scanner_screen.dart';
 import 'package:project/screens/search_screen.dart';
-
+import 'package:project/screens/application_screen.dart';
+import 'package:project/services/data_service.dart';
+import 'package:project/screens/add_new_device_screen.dart';
+import 'package:project/screens/add_new_device_form.dart';
 
 // --- 路由名称常量 ---
 class AppRoutes {
@@ -19,17 +22,29 @@ class AppRoutes {
   static const String search = '/search';
   static const String addDevice = '/add_device';
   static const String addExistTaggedDevice = '/add_exist_tagged_device';
+  static const String application = '/application';
+  static const String addNewDevice = '/add_new_device';
+  static const String addNewDeviceForm = '/add_new_device_form';
 
   // --- 路由映射表 ---
   static Map<String, WidgetBuilder> get routes {
     return {
       home: (context) => const HomeScreen(),
       login: (context) => const LoginScreen(),
-      device: (context) => const DeviceScreen(),
+      device: (context) {
+        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        return DeviceScreen(itemId: args?['itemId'] as String?);
+      },
+      application: (context) {
+        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        return ApplicationScreen(rentId: args?['rentId'] as String?);
+      },
       qrScanner: (context) => const QrScannerScreen(),
       search: (context) => const SearchScreen(),
       addDevice: (context) => const AddDeviceScreen(),
       addExistTaggedDevice: (context) => const AddExistTaggedDeviceScreen(),
+      addNewDevice: (context) => const AddNewDeviceScreen(),
+      addNewDeviceForm: (context) => const AddNewDeviceForm(),
     };
   }
 }
@@ -39,11 +54,21 @@ void main() {
   // 4. 确保 Flutter 绑定已初始化 (异步操作前需要)
   WidgetsFlutterBinding.ensureInitialized();
 
+  // --- 数据源切换变量 ---
+  // true: 使用示例数据，false: 使用真实API
+  const bool useMockData = true; // ← 只需修改这里即可切换
+
   runApp(
-    // 5. 使用 ChangeNotifierProvider 提供 AuthService
-    ChangeNotifierProvider(
-      create: (context) => AuthService(), // 创建 AuthService 实例
-      child: const MyApp(), // MyApp 作为子 Widget
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => AuthService()),
+        ChangeNotifierProvider(
+          create: (context) => DataService(
+            dataSourceType: useMockData ? DataSourceType.mock : DataSourceType.api,
+          ),
+        ),
+      ],
+      child: const MyApp(),
     ),
   );
 }
@@ -65,9 +90,6 @@ class MyApp extends StatelessWidget {
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
-        ),
-        tabBarTheme: TabBarTheme(
-          unselectedLabelColor: Colors.grey[600],
         ),
         dividerTheme: DividerThemeData(
           color: Colors.grey[200],

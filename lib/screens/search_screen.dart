@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../utils/haptics.dart';
+import '../services/data_service.dart';
+import '../models/item.dart';
+import '../models/rent.dart';
 
 // --- SearchResultItem 类定义 ---
 class SearchResultItem {
@@ -19,20 +23,9 @@ class SearchResultItem {
 // --- 类定义结束 ---
 
 // --- 示例数据 (如果未导入) ---
-final List<SearchResultItem> _allItems = [
-  SearchResultItem(id: 'd001', title: '我的智能设备', overline: '客厅', type: 'device'),
-  SearchResultItem(id: 'd002', title: '智能灯泡 X', overline: '卧室', type: 'device'),
-  SearchResultItem(id: 'd003', title: '温控器 Z', overline: '客厅', type: 'device'),
-  SearchResultItem(id: 'a001', title: '安装申请单', overline: '待审核', type: 'application'),
-  SearchResultItem(id: 'd004', title: '前门摄像头', overline: '入口', type: 'device'),
-  SearchResultItem(id: 'a002', title: '维修工单', overline: '处理中', type: 'application'),
-  SearchResultItem(id: 'd005', title: '大门智能锁', overline: '入口', type: 'device'),
-  SearchResultItem(id: 's001', title: '用户偏好设置', overline: '系统设置', type: 'setting'),
-  SearchResultItem(id: 'd006', title: '厨房顶灯', overline: '厨房', type: 'device'),
-  SearchResultItem(id: 'a003', title: '服务单 #12345', overline: '已完成', type: 'application'),
-];
+// 移除静态示例数据，改为动态获取
+// final List<SearchResultItem> _allItems = [ ... ];
 // --- 示例数据结束 ---
-
 
 // 搜索页面 Widget
 class SearchScreen extends StatefulWidget {
@@ -54,7 +47,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     // 初始化时，显示所有项目（或根据需求保持为空直到用户开始搜索）
-    _filteredItems = List.from(_allItems); // 初始显示所有项目
+    _loadData();
     // 为搜索控制器添加监听器，以便在文本变化时触发搜索
     _searchController.addListener(_onSearchChanged);
   }
@@ -81,10 +74,10 @@ class _SearchScreenState extends State<SearchScreen> {
       _showClearButton = query.isNotEmpty;
       if (query.isEmpty) {
         // 如果查询为空，重置列表以显示所有项目
-        _filteredItems = List.from(_allItems);
+        _loadData();
       } else {
         // 根据查询过滤项目 (匹配 title 或 overline)
-        _filteredItems = _allItems.where((item) {
+        _filteredItems = _filteredItems.where((item) {
           final titleMatch = item.title.toLowerCase().contains(query);
           final overlineMatch = item.overline.toLowerCase().contains(query);
           // 如果 title 或 overline 包含查询文本，则保留该项目
@@ -128,6 +121,35 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
       ),
     );
+  }
+
+  // 加载数据
+  Future<void> _loadData() async {
+    final dataService = Provider.of<DataService>(context, listen: false);
+    final items = await dataService.getItems();
+    final rents = await dataService.getRents();
+    final allItems = <SearchResultItem>[];
+    // 转换设备数据
+    for (var item in items) {
+      allItems.add(SearchResultItem(
+        id: item.itemId ?? '',
+        title: item.name,
+        overline: item.location ?? '',
+        type: 'device',
+      ));
+    }
+    // 转换租赁数据
+    for (var rent in rents) {
+      allItems.add(SearchResultItem(
+        id: rent.rentId.toString(),
+        title: '租赁 #\\${rent.rentId}',
+        overline: '设备ID: \\${rent.itemId}，用户ID: \\${rent.userId}',
+        type: 'application',
+      ));
+    }
+    setState(() {
+      _filteredItems = allItems;
+    });
   }
 
   @override
@@ -198,23 +220,25 @@ class _SearchScreenState extends State<SearchScreen> {
               style: theme.textTheme.titleMedium, // 使用中号标题字体
             ),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey), // 右侧箭头图标
-            onTap: () { // 列表项点击事件
-              // AppHaptics.lightImpact(); // 可选：添加触感反馈
-              print('Clicked:  ${item.title} (ID: ${item.id})');
-              // TODO: 在这里实现点击列表项后的操作，例如导航到详情页
-              // Navigator.pushNamed(context, '/details', arguments: item.id);
+            onTap: () {
+              print('Tapped on item: \\${item.title}');
+              if (item.type == 'device') {
+                Navigator.pushNamed(
+                  context,
+                  '/device',
+                  arguments: {'itemId': item.id},
+                );
+              } else if (item.type == 'application') {
+                Navigator.pushNamed(
+                  context,
+                  '/application',
+                  arguments: {'rentId': item.id},
+                );
+              }
             },
           );
         },
-        separatorBuilder: (context, index) { // 构建分隔线
-          // 添加分隔线样式，与图片一致
-          return const Divider(
-            height: 1, // 分隔线高度（视觉上是间距）
-            thickness: 1, // 分割线粗细
-            indent: 72, // 左侧缩进，大致与文字对齐（leading 图标宽度 + 间距）
-            endIndent: 16, // 可选：右侧缩进
-          );
-        },
+        separatorBuilder: (context, index) => const Divider(height: 1), // 分隔线
       ),
     );
   }

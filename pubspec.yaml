@@ -33,15 +33,18 @@ dependencies:
 
 #  mobile_scanner: ^6.0.8
   qr_code_scanner_plus: ^2.0.10
-  provider: ^6.1.4 # For state management
+  provider: ^6.0.5
   shared_preferences: ^2.5.3 # For persisting login state
+  http: ^1.1.0
 
   camera: ^0.11.0+1           # Flutter 相机插件 (请检查最新版本)
   google_mlkit_barcode_scanning: ^0.14.1 # ML Kit 条码扫描
   google_mlkit_text_recognition: ^0.15.0  # ML Kit 文本识别
+  google_mlkit_commons: ^0.11.0  # ML Kit 通用组件
   path_provider: ^2.1.5        # 用于获取文件路径 (需要)
   path: ^1.9.1                 # 用于处理路径 (需要)
   permission_handler: ^12.0.0+1 # 强烈建议用于权限处理
+  image_picker: ^1.0.7         # 用于从相册选择图片
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

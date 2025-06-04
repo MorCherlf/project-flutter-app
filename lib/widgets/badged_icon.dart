@@ -25,53 +25,49 @@ class BadgedIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveColor = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
-    final shouldShowBadge = showBadge && badgeCount != null && badgeCount! > 0;
-    String badgeDisplay = '';
-
-    if (shouldShowBadge) {
-      if (badgeCount! > 99) {
-        badgeDisplay = '99+';
-      } else {
-        badgeDisplay = badgeCount!.toString();
-      }
+    
+    // 如果 badgeCount 为 0 或 null，或者 showBadge 为 false，直接返回 Icon
+    if (!showBadge || badgeCount == null || badgeCount == 0) {
+      return Icon(icon, size: iconSize, color: effectiveColor);
     }
+
+    String badgeDisplay = badgeCount! > 99 ? '99+' : badgeCount!.toString();
 
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
         Icon(icon, size: iconSize, color: effectiveColor),
-        if (shouldShowBadge)
-          Positioned(
-            right: -12,
-            top: -10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: badgeColor,
-                borderRadius: BorderRadius.circular(badgeRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
-              child: Text(
-                badgeDisplay,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: textColor,
-                  fontSize: _getFontSize(badgeDisplay),
-                  height: 1.2,
+        Positioned(
+          right: -12,
+          top: -10,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: badgeColor,
+              borderRadius: BorderRadius.circular(badgeRadius),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
                 ),
-                textAlign: TextAlign.center,
-              ),
+              ],
             ),
-          )
+            constraints: const BoxConstraints(
+              minWidth: 16,
+              minHeight: 16,
+            ),
+            child: Text(
+              badgeDisplay,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: textColor,
+                fontSize: _getFontSize(badgeDisplay),
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        )
       ],
     );
   }

@@ -9,6 +9,7 @@ import 'package:path/path.dart' show join; // 导入 path 包的方法
 import 'package:path_provider/path_provider.dart'; // 导入 path_provider
 import 'package:permission_handler/permission_handler.dart'; // 导入权限处理器
 import 'package:project/utils/haptics.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'add_exist_tagged_device_form.dart'; // 确保 Haptics 工具类路径正确
 
@@ -20,11 +21,12 @@ class AddExistTaggedDeviceScreen extends StatefulWidget {
   State<AddExistTaggedDeviceScreen> createState() => _AddExistTaggedDeviceScreenState();
 }
 
-class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen> {
+class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen> with WidgetsBindingObserver {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
   bool _isProcessing = false; // 防止重复处理
   String? _errorMessage;
+  final ImagePicker _imagePicker = ImagePicker();
 
   // ML Kit 实例
   final BarcodeScanner _barcodeScanner =
@@ -37,15 +39,29 @@ class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeCamera(); // 初始化相机
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cameraController?.dispose(); // 销毁相机控制器
     _barcodeScanner.close();      // 关闭 ML Kit 扫描器
     _textRecognizer.close();      // 关闭 ML Kit 识别器
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+    if (state == AppLifecycleState.inactive) {
+      _cameraController?.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      _initializeCamera();
+    }
   }
 
   // 初始化相机和权限检查
@@ -142,7 +158,7 @@ class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen>
         final qrCode = barcodes.firstWhere(
                 (barcode) => barcode.format == BarcodeFormat.qrCode,
             orElse: () => barcodes.first); // 如果没找到 QR，就取第一个（虽然我们配置了只扫QR）
-        qrData = qrCode.rawValue;
+        qrData = _extractDeviceId(qrCode.rawValue);
         print('[INFO] QR Code detected: $qrData');
       } else {
         print('[INFO] No QR Code detected.');
@@ -157,7 +173,7 @@ class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen>
           context,
           MaterialPageRoute(
             builder: (context) => AddExistTaggedDeviceForm( // 跳转到你的表单页
-              qrCodeData: qrData, // 传递二维码数据 (可能为 null)
+              qrCodeData: qrData, // 只传递设备ID (可能为 null)
               recognizedText: ocrText, // 传递识别文本 (可能为空字符串)
             ),
           ),
@@ -175,6 +191,73 @@ class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen>
       // 确保处理标志被重置
       if (mounted) {
         setState(() { _isProcessing = false; });
+      }
+    }
+  }
+
+  // 从相册选择图片并处理
+  Future<void> _pickAndProcessImage() async {
+    if (_isProcessing) return;
+
+    AppHaptics.mediumImpact(); // 震动
+
+    try {
+      final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      setState(() {
+        _isProcessing = true;
+      });
+      AppHaptics.mediumImpact();
+
+      // 准备 ML Kit 输入图像
+      final InputImage inputImage = InputImage.fromFilePath(image.path);
+
+      // 执行条码扫描和文本识别
+      final Future<List<Barcode>> barcodeFuture = _barcodeScanner.processImage(inputImage);
+      final Future<RecognizedText> textFuture = _textRecognizer.processImage(inputImage);
+
+      final results = await Future.wait([barcodeFuture, textFuture]);
+
+      final List<Barcode> barcodes = results[0] as List<Barcode>;
+      final RecognizedText recognizedText = results[1] as RecognizedText;
+
+      String? qrData;
+      if (barcodes.isNotEmpty) {
+        final qrCode = barcodes.firstWhere(
+          (barcode) => barcode.format == BarcodeFormat.qrCode,
+          orElse: () => barcodes.first,
+        );
+        qrData = _extractDeviceId(qrCode.rawValue);
+        print('[INFO] QR Code detected from image: $qrData');
+      }
+
+      final String ocrText = recognizedText.text;
+      print('[INFO] Text detected from image: $ocrText');
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddExistTaggedDeviceForm(
+              qrCodeData: qrData,
+              recognizedText: ocrText,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('[ERROR] Error during image processing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('处理失败: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
       }
     }
   }
@@ -223,7 +306,7 @@ class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen>
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(width: 16),
-                  Text("正在识别..."),
+                  Text("Identifying..."),
                 ],
               ),
             )
@@ -244,21 +327,29 @@ class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen>
       // 这里使用 FloatingActionButtonLocation 实现类似效果
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _isCameraInitialized && !_isProcessing && _errorMessage == null
-          ? FloatingActionButton(
-        onPressed: _captureAndProcess,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        // 模仿图片中的样式 (一个圆圈中间一个实心圆)
-        child: const Icon(Icons.circle, size: 56, color: Colors.black), // 外圈用 Icon 模拟
-        // 可以用更复杂的 Stack 来实现完全一样的图标
-        // child: Stack(
-        //   alignment: Alignment.center,
-        //   children: [
-        //     Icon(Icons.circle_outlined, size: 60, color: Colors.black),
-        //     Icon(Icons.circle, size: 40, color: Colors.black),
-        //   ],
-        // ),
-      )
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 拍照按钮
+                  FloatingActionButton(
+                    onPressed: _captureAndProcess,
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    child: const Icon(Icons.circle, size: 56, color: Colors.black),
+                  ),
+                  const SizedBox(width: 16),
+                  // 上传图片按钮
+                  FloatingActionButton(
+                    onPressed: _pickAndProcessImage,
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    child: const Icon(Icons.photo_library),
+                  ),
+                ],
+              ),
+            )
           : null, // 相机未就绪或正在处理时不显示按钮
     );
   }
@@ -278,6 +369,24 @@ class _AddExistTaggedDeviceScreenState extends State<AddExistTaggedDeviceScreen>
       borderRadius: BorderRadius.circular(16.0),
       child: CameraPreview(_cameraController!),
     );
+  }
+
+  /// 提取二维码中的设备ID
+  String? _extractDeviceId(String? code) {
+    if (code == null) return null;
+    final uri = Uri.tryParse(code);
+    if (uri == null) return null;
+    // 1. https://xxx.com/device/idxsxsxsxsx
+    final devicePath = uri.pathSegments;
+    if (devicePath.length >= 2 && devicePath[devicePath.length - 2] == 'device') {
+      return devicePath.last;
+    }
+    // 2. https://xxx.com/xxxxx?deviceid=idxsxsxsxsx
+    final deviceId = uri.queryParameters['deviceid'];
+    if (deviceId != null && deviceId.isNotEmpty) {
+      return deviceId;
+    }
+    return null;
   }
 }
 

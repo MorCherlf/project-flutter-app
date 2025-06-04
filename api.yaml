@@ -1,0 +1,1115 @@
+openapi: 3.0.3
+info:
+  title: Swagger stocktaking - OpenAPI 3.0
+  description: |-
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis at dolor sit amet tellus interdum scelerisque. In dui nisi, tincidunt vel justo in, cursus molestie mauris. Nunc laoreet, velit eget iaculis facilisis, diam purus aliquet quam, quis iaculis nunc leo vitae quam. Nulla semper, diam eget pharetra aliquam, augue lorem maximus mauris, vel vulputate quam elit fermentum dui. Etiam ac dui at justo lacinia tempor sed non ipsum. Praesent a sapien et tortor tristique rutrum et at dui. Nam quis enim ac arcu varius posuere. Suspendisse maximus turpis quis eros gravida, et mattis sem molestie.
+
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: apiteam@swagger.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.11
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
+servers:
+  - url: https://stocktaking.swagger.io/api/v3
+tags:
+  - name: dictionaries
+    description: Словари 
+  - name: storage
+    description: Доступ к учету оборудования
+  - name: repair
+    description: Ремонт оборудования
+  - name: rent
+    description: Аренда оборудования    
+  - name: user
+    description: Операции пользователя
+  - name: internal
+    description: Внутренние функции
+paths:
+  /dictionaries/itemTypes:
+    get:
+      tags:
+        - dictionaries
+      summary: Список типов оборудования
+      description: Фунция возвращает список типов оборудования
+      operationId: getDictItems
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemTypes'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ItemTypes'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Dictionary not found
+        '500':
+          description: Internal error
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+  /dictionaries/itemStatuses:
+    get:
+      tags:
+        - dictionaries
+      summary: Список статусов оборудования
+      description: Фунция возвращает список статус оборудования
+      operationId: getDictItemsStatuses
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemStatuses'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Dictionary not found
+        '500':
+          description: Internal error
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+            
+  /dictionaries/repairStatuses:
+    get:
+      tags:
+        - dictionaries
+      summary: Список статусов ремонта оборудования
+      description: Фунция возвращает список статусов ремонта оборудования
+      operationId: getDictRepairStatuses
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      example: "in_progress"
+                    itemStatusId:
+                      type: integer
+                      format: int64
+                      example: 2
+                    name: 
+                      type: string
+                      example: "В ремонте"
+
+        '401':
+          description: Unauthorized
+        '404':
+          description: Dictionary not found
+        '500':
+          description: Internal error
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+            
+  /dictionaries/rentStatuses:
+    get:
+      tags:
+        - dictionaries
+      summary: Список статусов аренды оборудования
+      description: Фунция возвращает список статусов аренды оборудования
+      operationId: getDictRentStatuses
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      example: "Closed"
+                    itemStatusId:
+                      type: integer
+                      format: int64
+                      example: 6
+                    name: 
+                      type: string
+                      example: "Закрыто"
+
+        '401':
+          description: Unauthorized
+        '404':
+          description: Dictionary not found
+        '500':
+          description: Internal error
+
+ 
+            
+  /storage/inventory/item/{itemId}/itemInfo:
+    get:
+      tags:
+        - storage
+      summary: Возвращает информацию об обрудовании
+      description: Функция возвращает информацию об обрудовании по идентификатору 
+      operationId: getItemInfoById
+      parameters:
+        - name: itemId
+          in: path
+          description: Идентификатор предмета
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  itemid:
+                    type: string
+                    description: Идентификатор предмета
+                    example: "EXA1-1022-BAW12"
+                  details:
+                    type: object
+                    description: Детали
+        '400':
+          description: Invalid ID supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: Item not found
+                   
+  /storage/inventory:
+    get:
+      tags:
+        - storage
+      summary: Возвращает список обрудования по типу
+      description: Функция возвращает список учтенного оборудования по типу 
+      operationId: getItemsByType
+      parameters:
+        - name: itemTypeId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item' 
+        '401':
+          description: Unauthorized
+                    
+      security:
+        - api_key: []
+  /storage/inventory/item:
+    post:
+      tags:
+        - storage
+      summary: Учесть оборудование 
+      description: Функция вносит оборудование в учет
+      operationId: addNewItem
+      requestBody:
+        content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Item' 
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  itemid:
+                    type: string
+                    description: Идентификатор предмета
+                    example: "EXA1-1022-BAW12"
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized
+        '422':
+          description: Validation exception
+  /storage/inventory/item/{itemId}:
+    get:
+      tags:
+        - storage
+      summary: Найти оборудование 
+      description: Фунция возращает оборудование по идентификатору
+      operationId: getItemById
+      parameters:
+        - name: itemId
+          in: path
+          description: Идентификатор предмета
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item' 
+        '400':
+          description: Invalid ID supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: Item not found
+    delete:
+      tags:
+        - storage
+      summary: Удалить оборудование из учета
+      description: Фунция удаляет оборудование из учета по идентификатору
+      operationId: deleteItem
+      parameters:
+        - name: itemId
+          in: path
+          description: Идентификатор предмета
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '204': 
+          description: No Content
+        '400':
+          description: Invalid ID supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: Item not found
+          
+  /repairs:
+    get:
+      tags:
+        - repair
+      summary: Получение информации о заявке по ремонту
+      description: 'Получение информации о ремонте по номеру заявки'
+      operationId: getAllRepairs
+      parameters:
+        - name: repairStatusId
+          in: query
+          description: Идентификатор статуса заявки на ремонт
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    repairId:
+                      type: integer
+                      description: Идентификатор завки
+                      example: 56
+                    ItemId: 
+                      type: integer
+                      description: Идентификатор предмета в ремонте
+                      example: 56
+                    CreatorId: 
+                      type: integer
+                      description: Идентификатор создателя заявки
+                      example: 1
+                    RepairmanId: 
+                      type: integer
+                      description: Идентификатор ответственного пользователя
+                      example: 23
+                    estimatedEndDate: 
+                      type: string
+                      format: date-time
+                      description: Дата завершения ремонта
+                      example: "01-02-1087"
+                    reportNote:
+                      type: string
+                      description: Отчет о ремонте
+                      example: "Заменен USB-порт"
+                  
+        '400':
+          description: Invalid ID supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: repairId not found    
+          
+  /repair/{repairId}:
+    get:
+      tags:
+        - repair
+      summary: Получение информации о заявке по ремонту
+      description: 'Получение информации о ремонте по номеру заявки'
+      operationId: getRepair
+      parameters:
+        - name: repairId
+          in: path
+          description: Идентификатор заявки на ремонт
+          required: true
+          schema:
+            type: string
+            format: int64
+      responses:
+        '200': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repairId:
+                    type: integer
+                    description: Идентификатор завки
+                    example: 56
+                  ItemId: 
+                    type: integer
+                    description: Идентификатор предмета в ремонте
+                    example: 56
+                  CreatorId: 
+                    type: integer
+                    description: Идентификатор создателя заявки
+                    example: 1
+                  RepairmanId: 
+                    type: integer
+                    description: Идентификатор ответственного пользователя
+                    example: 23
+                  estimatedEndDate: 
+                    type: string
+                    format: date-time
+                    description: Дата завершения ремонта
+                    example: "01-02-1087"
+                  reportNote:
+                    type: string
+                    description: Отчет о ремонте
+                    example: "Заменен USB-порт"
+                  
+        '400':
+          description: Invalid ID supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: repairId not found    
+  /repair:
+    post:
+      tags:
+        - repair
+      summary: Офомление заявки на ремонт
+      description: 'Создания заявки на ремонт оборудования'
+      operationId: newRepairCreate
+      requestBody:
+        content:
+          application/json:
+            schema:
+                type: object
+                properties:
+                  ItemId: 
+                    type: integer
+                    description: Идентификатор предмета в ремонте
+                    example: 56
+                  CreatorId: 
+                    type: integer
+                    description: Идентификатор ответственного пользователя
+                    example: 1
+              
+      responses:
+        '201': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repairId:
+                    type: integer
+                    description: Идентификатор завки
+                    example: 56
+                  estimatedEndDate: 
+                    type: string
+                    format: date-time
+                    description: Дата завершения ремонта
+                  
+        '400':
+          description: Invalid parameters supplied
+        '401':
+          description: Unauthorized  
+          
+  /repair/{repairId}/repairAccept:
+    post:
+      tags:
+        - repair
+      summary: Взятие заявки в работу
+      description: 'Взятие заявки по ремонту в работу'
+      operationId: acceptRepair
+      parameters:
+        - name: repairId
+          in: path
+          description: Идентификатор заявки на ремонт
+          required: true
+          schema:
+            type: string
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+                type: object
+                properties:
+                  RepairmanId : 
+                    type: integer
+                    description: Идентификатор ремонтника
+                    example: 28
+      responses:
+        '200': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repairId:
+                    type: integer
+                    description: Идентификатор завки
+                    example: 56
+                  ItemId: 
+                    type: integer
+                    description: Идентификатор предмета в ремонте
+                    example: 56
+                  CreatorId: 
+                    type: integer
+                    description: Идентификатор создателя заявки
+                    example: 1
+                  RepairmanId: 
+                    type: integer
+                    description: Идентификатор ответственного пользователя
+                    example: 23
+                  estimatedEndDate: 
+                    type: string
+                    format: date-time
+                    description: Дата завершения ремонта
+                    example: "01-02-1087"
+                  reportNote:
+                    type: string
+                    description: Отчет о ремонте
+                    example: "Заменен USB-порт"
+                  
+        '400':
+          description: Invalid ID supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: repairId not found    
+          
+  /repair/{repairId}/repairClose:
+    post:
+      tags:
+        - repair
+      summary: Закрытие заявки
+      description: 'Закрытие заявки по ремонту'
+      operationId: closeRepair
+      parameters:
+        - name: repairId
+          in: path
+          description: Идентификатор заявки на ремонт
+          required: true
+          schema:
+            type: string
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+                type: object
+                properties:
+                  ReportNote: 
+                    type: string
+                    description: Отчет о ремонте
+                    example: "Заправлен картридж"
+      responses:
+        '200': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repairId:
+                    type: integer
+                    description: Идентификатор завки
+                    example: 56
+                  ItemId: 
+                    type: integer
+                    description: Идентификатор предмета в ремонте
+                    example: 56
+                  CreatorId: 
+                    type: integer
+                    description: Идентификатор создателя заявки
+                    example: 1
+                  RepairmanId: 
+                    type: integer
+                    description: Идентификатор ответственного пользователя
+                    example: 23
+                  estimatedEndDate: 
+                    type: string
+                    format: date-time
+                    description: Дата завершения ремонта
+                    example: "01-02-1087"
+                  reportNote:
+                    type: string
+                    description: Отчет о ремонте
+                    example: "Заменен USB-порт"
+                  
+        '400':
+          description: Invalid ID supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: repairId not found    
+          
+  /rent:
+    post:
+      tags:
+        - rent
+      summary: Офомление заявки на аренду
+      description: 'Создания заявки на аренду оборудования'
+      operationId: newRentCreate
+      requestBody:
+        content:
+          application/json:
+            schema:
+                type: object
+                properties:
+                  ItemId: 
+                    type: integer
+                    description: Идентификатор предмета для аренды
+                    example: 43
+                  UserId: 
+                    type: integer
+                    description: Идентификатор пользователя арендатора
+                    example: 1
+                  startDate:
+                    type: string
+                    format: date-time
+                  endDate:
+                    type: string
+                    format: date-time
+
+                      
+              
+      responses:
+        '200': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rentId:
+                    type: integer
+                    description: Идентификатор завки на аренду
+                    example: 157
+                  
+        '400':
+          description: Invalid parameters supplied
+        '401':
+          description: Unauthorized
+  /rents:
+    get:
+      tags:
+        - rent
+      summary: Просмотр заявок на аренду
+      description: 'Просмотр заявок на аренду оборудования'
+      operationId: getAllRents
+      parameters:
+        - name: status
+          in: query
+          description: Статус заявки
+          required: false
+          schema:
+            type: string
+      responses:
+        '200': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Rent' 
+                  
+        '400':
+          description: Invalid parameters supplied
+        '401':
+          description: Unauthorized
+  /rent/{rentId}:
+    get:
+      tags:
+        - rent
+      summary: Просмотр заявки на аренду оборудования
+      description: 'Просмотр заявки на аренду оборудования по идентификатору'
+      operationId: getRentById
+      parameters:
+        - name: rentId
+          in: path
+          description: Идентификатор заявки
+          required: true
+          schema:
+            type: string
+      responses:
+        '200': 
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rent' 
+                  
+        '400':
+          description: Invalid parameters supplied
+        '401':
+          description: Unauthorized
+ 
+  /rent/{rentId}/status:
+    post:
+      tags:
+        - rent
+      summary: Изменение статуса заявки на аренду оборудования
+      description: 'Изменение статуса заявки на аренду оборудования по идентификатору'
+      operationId: setRentStatus
+      parameters:
+        - name: rentId
+          in: path
+          description: Идентификатор заявки
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+                type: object
+                properties:
+                  RentStatusId:
+                    type: integer
+                    format: int32
+                    example: 2
+        
+      responses:
+        '204': 
+          description: No content
+        '400':
+          description: Invalid parameters supplied
+        '401':
+          description: Unauthorized
+          
+          
+  /user/login:
+    get:
+      tags:
+        - user
+      summary: Logs user into the system
+      description: ''
+      operationId: loginUser
+      parameters:
+        - name: username
+          in: query
+          description: The user name for login
+          required: false
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: The password for login in clear text
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when token expires
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/xml:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid username/password supplied
+          
+  /user/logout:
+    get:
+      tags:
+        - user
+      summary: Logs out current logged in user session
+      description: ''
+      operationId: logoutUser
+      parameters: []
+      responses:
+        default:
+          description: successful operation
+          
+  /user/{username}:
+    get:
+      tags:
+        - user
+      summary: Get user by user name
+      description: ''
+      operationId: getUserByName
+      parameters:
+        - name: username
+          in: path
+          description: 'The name that needs to be fetched. Use user1 for testing. '
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid username supplied
+        '401':
+          description: Unauthorized
+        '404':
+          description: User not found
+          
+  /user/{username}/blacklist:
+    post:
+      tags:
+        - user
+      summary: Добавить пользователя в черный список
+      description: ''
+      operationId: addToBlacklist
+      parameters:
+        - name: username
+          in: path
+          description: ''
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                properties:
+                  blacklistId:
+                    type: integer
+                    example: 123
+        '401':
+          description: Unauthorized
+        '400':
+          description: Invalid username supplied
+        '404':
+          description: User not found
+    delete:
+      tags:
+        - user
+      summary: Удалить пользователя из черного списка
+      description: ''
+      operationId: removeFromBlacklist
+      parameters:
+        - name: username
+          in: path
+          description: ''
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: Unauthorized
+        '400':
+          description: Invalid username supplied
+        '404':
+          description: User not found
+    
+  /generate/newItemId:
+    get:
+      tags:
+        - internal
+      summary: Гененрация нового уникального идентификатора оборудования
+      operationId: getNewItemId
+      parameters:
+        - name: amount
+          in: query
+          description: Количество идентификаторов для генерации
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    itemId:
+                      type: string
+        '401':
+          description: Unauthorized
+          
+      
+  /recognition/analyze:
+    post:
+      tags:
+        - internal
+      summary: Распознавание объекта 
+      description: 'Распознавание объекта на стороне сервера'
+      operationId: analyzeObject
+      requestBody:
+        content:
+          image/jpeg:
+            schema:
+              type: object
+                  
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      example: "printer"
+                    itemTypeId:
+                      type: integer
+                      format: int64
+                      example: 11
+                    name: 
+                      type: string
+                      example: "Принтер"
+                    probability:
+                      type: number
+                      example: 0.9899
+                      
+        '401':
+          description: Unauthorized
+          
+components:
+  schemas:
+    ItemTypes:
+      type: array
+      items:
+        type: object
+        properties:
+          code:
+            type: string
+            example: "printer"
+          itemTypeId:
+            type: integer
+            format: int64
+            example: 11
+          name: 
+            type: string
+            example: "Принтер"
+      xml:
+        name: ItemTypes
+    ItemStatuses:
+      type: array
+      items:
+        type: object
+        properties:
+          code:
+            type: string
+            example: "available"
+          itemStatusId:
+            type: integer
+            format: int64
+            example: 1
+          name: 
+            type: string
+            example: "Доступен"
+    Item:
+      required:
+        - name
+        - itemTypeId
+      type: object
+      properties:
+        name:
+          type: string
+          description: Название оборудования
+          example: "Принтер HP Бух"
+        itemTypeId:
+          type: integer
+          description: Идентификатор типа техники
+          example: 10
+        itemId:
+          type: string
+          description: Идентификатор оборудования
+          example: "UDEQ-4AW5-QQ47"
+        location:
+          type: string
+          description: Местонахождение оборудования
+          example: "Кладовая №2"
+        status:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "available"
+            itemStatusId:
+              type: integer
+              format: int64
+              example: 1
+            name: 
+              type: string
+              example: "Доступен"
+        extraParams:
+          type: string
+          description: Доп параметры
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        username:
+          type: string
+          example: theUser
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: James
+        email:
+          type: string
+          example: john@email.com
+        phone:
+          type: string
+          example: '12345'
+        isBlacklisted:
+          type: boolean
+          example: false
+      xml:
+        name: user
+        
+    Rent: 
+      type: object
+      properties:
+        rentId:
+          type: integer
+          description: Идентификатор завки на аренду
+          example: 157
+        ItemId: 
+          type: integer
+          description: Идентификатор предмета для аренды
+          example: 43
+        UserId: 
+          type: integer
+          description: Идентификатор пользователя арендатора
+          example: 1
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        isBooking:
+          type: boolean
+        RentStatusId:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "Closed"
+            itemStatusId:
+              type: integer
+              format: int64
+              example: 6
+            name: 
+              type: string
+              example: "Закрыто"
+          
+
+       
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        type:
+          type: string
+        message:
+          type: string
+      xml:
+        name: '##default'
+  requestBodies:
+    UserArray:
+      description: List of user object
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/User'
+  securitySchemes:
+    petstore_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://petstore3.swagger.io/oauth/authorize
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header

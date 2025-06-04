@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:project/utils/haptics.dart';
 import '../main.dart';
 import '../widgets/badged_icon.dart';
+import 'package:provider/provider.dart';
+import '../services/data_service.dart';
+import '../models/item.dart';
+import '../models/rent.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late TabController _applicationsTabController;
 
   final List<String> _tabs = ["All", "Review", "Process", "Complete", "Repair"];
-  final List<int> _reviewBadgeCounts = [0, 3, 100, 0, 0];
+  final List<int> _reviewBadgeCounts = [0, 0, 0, 0, 0];
 
   @override
   void initState() {
@@ -121,8 +125,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           // 申请表导航
           NavigationDestination(
-            icon: BadgedIcon(icon: Icons.inbox_outlined, badgeCount: 103,),
-            selectedIcon: BadgedIcon(icon: Icons.inbox, badgeCount: 103,),
+            icon: BadgedIcon(icon: Icons.inbox_outlined, badgeCount: 0,),
+            selectedIcon: BadgedIcon(icon: Icons.inbox, badgeCount: 0,),
             label: 'Applications',
           ),
 
@@ -148,54 +152,71 @@ class DevicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return TabBarView(
-      controller: tabController,
-      children: tabs.map((String name) {
-        return ListView.separated(
-          itemCount: 6,
-          itemBuilder: (context, index) {
-            return ListTile(
-              leading: Container(
-                width: 48,
-                height: 48,
-                color: Colors.grey[300],
-                child: const Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(Icons.square_outlined, color: Colors.grey, size: 30),
-                    Positioned(
-                      top: 5, left: 5,
-                      child: Icon(Icons.circle_outlined, color: Colors.grey, size: 15),
+    final dataService = Provider.of<DataService>(context, listen: false);
+    return FutureBuilder<List<Item>>(
+      future: dataService.getItems(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final items = snapshot.data ?? [];
+        return TabBarView(
+          controller: tabController,
+          children: tabs.map((String name) {
+            return ListView.separated(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return ListTile(
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    color: Colors.grey[300],
+                    child: const Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(Icons.square_outlined, color: Colors.grey, size: 30),
+                        Positioned(
+                          top: 5, left: 5,
+                          child: Icon(Icons.circle_outlined, color: Colors.grey, size: 15),
+                        ),
+                        Positioned(
+                          bottom: 5, right: 5,
+                          child: Icon(Icons.change_history_outlined, color: Colors.grey, size: 15),
+                        ),
+                      ],
                     ),
-                    Positioned(
-                      bottom: 5, right: 5,
-                      child: Icon(Icons.change_history_outlined, color: Colors.grey, size: 15),
-                    ),
-                  ],
-                ),
-              ),
-              title: Text(
-                'Overline',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-              ),
-              subtitle: Text(
-                'List item ${index + 1}',
-                style: theme.textTheme.titleMedium,
-              ),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () {
-                print('Tapped on list item ${index + 1}');
+                  ),
+                  title: Text(
+                    item.name,
+                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  ),
+                  subtitle: Text(
+                    item.location ?? '',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    print('Tapped on item: \\${item.name}');
+                    AppHaptics.mediumImpact();
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.device,
+                      arguments: {'itemId': item.itemId},
+                    );
+                  },
+                );
+              },
+              separatorBuilder: (context, index) {
+                return const Divider(
+                  height: 1,
+                  indent: 72,
+                );
               },
             );
-          },
-          separatorBuilder: (context, index) {
-            return const Divider(
-              height: 1,
-              indent: 72,
-            );
-          },
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 }
@@ -204,15 +225,16 @@ class DevicesScreen extends StatelessWidget {
 class ApplicationsScreen extends StatelessWidget {
   final TabController tabController;
   final List<String> tabs;
-  final List<int> reviewBadgeCounts; // 假设 badgeCounts 的长度和 tabs 长度一致
+  final List<int> reviewBadgeCounts;
 
   const ApplicationsScreen({super.key, required this.tabController, required this.tabs, required this.reviewBadgeCounts});
 
-  Widget _buildApplicationsTabContent(BuildContext context, String tabName) {
+  Widget _buildApplicationsTabContent(BuildContext context, String tabName, List<Rent> rents) {
     final theme = Theme.of(context);
     return ListView.separated(
-      itemCount: 6,
+      itemCount: rents.length,
       itemBuilder: (context, index) {
+        final rent = rents[index];
         return ListTile(
           leading: Container(
             width: 48,
@@ -236,30 +258,28 @@ class ApplicationsScreen extends StatelessWidget {
             ),
           ),
           title: Text(
-            tabName == 'All'
-                ? 'Review'
-                : tabName == 'Review'
-                ? 'Review'
-                : tabName == 'Process'
-                ? 'Process'
-                : tabName == 'Complete'
-                ? 'Complete'
-                : 'Repair',
+            tabName,
             style: theme.textTheme.titleMedium,
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('List item'),
+              Text('租赁ID: \\${rent.rentId}'),
               Text(
-                'Supporting line text lorem ipsum dolor sit amet, consectetur.',
+                '设备ID: \\${rent.itemId}，用户ID: \\${rent.userId}',
                 style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
           trailing: const Icon(Icons.play_arrow, color: Colors.grey),
           onTap: () {
-            print('Tapped on ${tabName} list item ${index + 1}');
+            print('Tapped on rentId: \\${rent.rentId}');
+            AppHaptics.mediumImpact();
+            Navigator.pushNamed(
+              context,
+              AppRoutes.application,
+              arguments: {'rentId': rent.rentId.toString()},
+            );
           },
         );
       },
@@ -270,58 +290,68 @@ class ApplicationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      children: [
-        TabBar(
-          controller: tabController,
-          isScrollable: true,
-          tabs: tabs.asMap().entries.map((entry) {
-            final index = entry.key;
-            final name = entry.value;
-            return Tab(
-              child: name == 'All'
-                  ? Text(name)
-                  : reviewBadgeCounts[index] > 0
-                  ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(name),
-                  const SizedBox(width: 5),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      reviewBadgeCounts[index].toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
+    final dataService = Provider.of<DataService>(context, listen: false);
+    return FutureBuilder<List<Rent>>(
+      future: dataService.getRents(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final rents = snapshot.data ?? [];
+        return Column(
+          children: [
+            TabBar(
+              controller: tabController,
+              isScrollable: true,
+              tabs: tabs.asMap().entries.map((entry) {
+                final index = entry.key;
+                final name = entry.value;
+                return Tab(
+                  child: name == 'All'
+                      ? Text(name)
+                      : reviewBadgeCounts[index] > 0
+                      ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(name),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          reviewBadgeCounts[index].toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              )
-                  : Text(name),
-            );
-          }).toList(),
-          tabAlignment: TabAlignment.center,
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: tabController,
-            children: tabs.map((String name) {
-              return _buildApplicationsTabContent(context, name);
-            }).toList(),
-          ),
-        ),
-      ],
+                    ],
+                  )
+                      : Text(name),
+                );
+              }).toList(),
+              tabAlignment: TabAlignment.center,
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: tabController,
+                children: tabs.map((String name) {
+                  return _buildApplicationsTabContent(context, name, rents);
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

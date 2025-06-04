@@ -15,12 +15,7 @@ class AddDeviceScreen extends StatelessWidget {
   // 处理 "Add New Device" 点击事件
   void _navigateToAddManual(BuildContext context) {
     AppHaptics.lightImpact(); // 添加震动反馈
-    print('Navigate to Add New Device Manually Screen');
-    // TODO: 在这里实现导航到手动添加设备页面的逻辑
-    // 例如: Navigator.pushNamed(context, AppRoutes.addManualDevice);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('TODO: Navigate to Add New Device')),
-    );
+    Navigator.pushNamed(context, AppRoutes.addNewDevice);
   }
 
   // 处理 "Add Exist Tagged Device" 点击事件
