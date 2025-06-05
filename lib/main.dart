@@ -12,6 +12,8 @@ import 'package:project/screens/application_screen.dart';
 import 'package:project/services/data_service.dart';
 import 'package:project/screens/add_new_device_screen.dart';
 import 'package:project/screens/add_new_device_form.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:project/firebase_options.dart';
 
 // --- 路由名称常量 ---
 class AppRoutes {
@@ -50,9 +52,14 @@ class AppRoutes {
 }
 
 // --- main 函数 ---
-void main() {
+void main() async {
   // 4. 确保 Flutter 绑定已初始化 (异步操作前需要)
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化 Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // --- 数据源切换变量 ---
   // true: 使用示例数据，false: 使用真实API
@@ -121,6 +128,38 @@ class MyApp extends StatelessWidget {
 
       // 7. 提供路由表，用于登录后的页面导航
       routes: AppRoutes.routes,
+
+      // onGenerateRoute 保持不变
+      onGenerateRoute: (settings) {
+        // 检查是否需要登录
+        if (settings.name != AppRoutes.login) {
+          final authService = Provider.of<AuthService>(context, listen: false);
+          if (!authService.isLoggedIn) {
+            return MaterialPageRoute(
+              builder: (context) => const LoginScreen(),
+            );
+          }
+        }
+
+        // 如果已登录或访问登录页面，使用正常路由
+        final builder = AppRoutes.routes[settings.name];
+        if (builder != null) {
+          return MaterialPageRoute(
+            builder: builder,
+            settings: settings,
+          );
+        }
+
+        // 处理未知路由
+        return MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('错误')),
+            body: Center(
+              child: Text('路由 ${settings.name} 未定义'),
+            ),
+          ),
+        );
+      },
 
       // onUnknownRoute 保持不变
       onUnknownRoute: (settings) {

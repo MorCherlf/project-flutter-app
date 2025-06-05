@@ -50,3 +50,40 @@ app.*.map.json
 
 # API Configuration
 lib/config/api_config.dart
+
+
+# Firebase specific
+# This file contains project-specific Firebase configurations and is generally safe to commit
+# IF it doesn't contain any sensitive secrets directly embedded by you.
+# However, some teams prefer to keep it out of version control if they manage configurations differently
+# or if the file gets auto-generated/modified often by tools in a way that causes merge conflicts.
+# If you download it from Firebase console and it's standard, it's usually okay.
+google-services.json
+GoogleService-Info.plist
+
+# Firebase CLI specific
+.firebase/
+firebase_options.dart
+firebase.json 
+# Often okay to commit, but can be ignored if auto-generated or contains sensitive local paths
+database.rules.json 
+# Commit if you manage rules in your repo, otherwise ignore if managed in Firebase console
+firestore.rules 
+# Commit if you manage rules in your repo
+firestore.indexes.json 
+# Commit if you manage indexes in your repo
+storage.rules 
+# Commit if you manage rules in your repo
+functions/node_modules/ 
+# If using Firebase Functions with Node.js
+functions/.runtimeconfig.json 
+# Contains runtime configuration, possibly sensitive
+functions/lib/ 
+# If you compile TypeScript to JavaScript for Firebase Functions
+functions/coverage/ 
+# Test coverage reports for Firebase Functions
+
+# Keystore files - NEVER commit these!
+*.jks
+*.keystore
+*.pem
